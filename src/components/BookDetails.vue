@@ -1,12 +1,18 @@
 <template>
-  <Dialog 
-    v-model:visible="modalVisible" 
-    modal 
-    @update:visible="onClick" 
-    header="Edit Profile" 
+  <Dialog
+    v-model:visible="modalVisible"
+    modal
+    @update:visible="onClick"
+    class="px-4 py-3"
+    :header="modalData?.volumeInfo.title || ''"
     :style="{ width: '25rem' }"
   >
-    эм)
+    <template v-if="modalData?.volumeInfo.description">
+      {{ modalData?.volumeInfo.description }}
+    </template>
+    <template v-else>
+      Нет описания
+    </template>
   </Dialog>
 </template>
 
@@ -15,20 +21,30 @@ import Dialog from 'primevue/dialog'
 import { defineEmits, defineProps, watch, ref } from 'vue'
 
 interface IProps {
+  data: Book | ''
   visible: boolean
 }
 const emit = defineEmits(['update:visible'])
 const props = defineProps<IProps>()
 
-
-watch(() => props.visible, (newValue) => {
-  modalVisible.value = newValue
-})
-
 const modalVisible = ref(props.visible)
+const modalData = ref(props.data)
+
+watch(
+  () => props.visible,
+  (newValue) => {
+    modalVisible.value = newValue
+  },
+)
+watch(
+  () => props.data,
+  (newValue) => {
+    modalData.value = newValue
+  },
+)
 
 const onClick = () => {
-  emit('update:visible') 
+  emit('update:visible')
 }
 </script>
 

@@ -5,6 +5,10 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      redirect: '/books', 
+    },
+    {
+      path: '/books',
       name: 'home',
       component: () => import('../views/HomePage.vue'),
     },
@@ -17,7 +21,7 @@ const router = createRouter({
       component: () => import('../views/AboutPage.vue'),
     },
     {
-      path: '/book/:id',
+      path: '/books/:id',
       component: () => import('../views/HomePage.vue'),
       props: true,
     },

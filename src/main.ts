@@ -8,6 +8,8 @@ import Aura from '@primevue/themes/aura'
 import PrimeVue from 'primevue/config'
 import Tooltip from 'primevue/tooltip';
 
+import infiniteScroll from "@/directives/infiniteScroll";
+
 import App from './App.vue'
 import router from './router'
 
@@ -28,6 +30,7 @@ app.use(PrimeVue, {
   },
 })
 app.directive('tooltip', Tooltip);
+app.directive("infinite-scroll", infiniteScroll);
 
 
 app.mount('#app')
