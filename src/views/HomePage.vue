@@ -76,22 +76,24 @@ const getBookById = async (id: string): Book => {
   }
 }
 
-const debouncedGetBooks = debounce(async (newQuery: string, maxResults: number) => {
-  if (newQuery) {
-    items.value = await getBooks(newQuery, maxResults)
-  }
-}, 250)
+/**
+ * Обновляет параметры запроса, модифицируя или удаляя параметр 'query'
+ *
+ * @param {Record<string, any>} currentQuery - Текущие параметры запроса
+ * @param {string} [queryValue] - Новое значение для параметра 'query'.
+ *                               Если значение пустое или не передано - параметр 'query' будет удалён
+ * @returns {Record<string, any>} Новый объект параметров запроса с обновлённым 'query'
+ */
+function getUpdatedQueryParams(currentQuery: Record<string, any>, queryValue?: string) {
+  const newQuery = { ...currentQuery }
 
-const updateQueryInUrl = (newQuery: string) => {
-  const newQueryParams = { ...route.query }
-
-  if (newQuery) {
-    newQueryParams.query = newQuery
+  if (queryValue) {
+    newQuery.query = queryValue
   } else {
-    delete newQueryParams.query
+    delete newQuery.query
   }
 
-  router.push({ path: route.path, query: newQueryParams })
+  return newQuery
 }
 
 /**
@@ -113,6 +115,17 @@ const loadMoreBooks = async () => {
   if (items.value === totalItems.value) {
     return
   }
+}
+
+const debouncedGetBooks = debounce(async (newQuery: string, maxResults: number) => {
+  if (newQuery) {
+    items.value = await getBooks(newQuery, maxResults)
+  }
+}, 250)
+
+const updateQueryInUrl = (newQuery: string) => {
+  const newQueryParams = getUpdatedQueryParams(route.query, newQuery)
+  router.push({ path: route.path, query: newQueryParams })
 }
 
 const openEdit = (item: Book) => {
@@ -160,6 +173,7 @@ watch(
   },
   { deep: true },
 )
+
 const itemsWithEdits = computed(() => {
   const savedBooks = JSON.parse(localStorage.getItem('editedBooks') || '{}')
   return items.value.map((book: Book) => (savedBooks[book.id] ? savedBooks[book.id] : book))
@@ -171,13 +185,7 @@ onMounted(async () => {
 })
 
 onBeforeRouteUpdate((to) => {
-  const newQuery = { ...to.query }
-
-  if (!query.value) {
-    delete newQuery.query
-  } else {
-    newQuery.query = query.value
-  }
+  const newQuery = getUpdatedQueryParams(to.query, query.value)
 
   if (JSON.stringify(newQuery) !== JSON.stringify(to.query)) {
     router.replace({ path: to.path, query: newQuery })
@@ -200,7 +208,6 @@ watch(
 </script>
 
 <template>
-  {{ editedTitle }}
   <main>
     <div class="my-2 flex gap-1.5 items-center">
       <div class="flex-1">
