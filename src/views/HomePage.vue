@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
-import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
-import axios from 'axios'
-import BooksTable from '@/components/UI/BooksTable.vue'
-import InputText from 'primevue/inputtext'
 import BookDetails from '@/components/BookDetails.vue'
+import BooksTable from '@/components/ui/BooksTable.vue'
 import debounce from '@/utils/debounce'
+import axios from 'axios'
 import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
+import { computed, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 
-const API_KEY = 'AIzaSyBBkgwFwjf6YAtl_UTPEmsLtF9k3spG6IE'
 const BASE_URL = 'https://www.googleapis.com/books/v1/volumes'
 
 const router = useRouter()
@@ -18,28 +17,32 @@ const items = ref<Book[]>([])
 const selectedBook = ref<Book | null>(null)
 const query = ref<string>('')
 const totalItems = ref<number>(1)
-const currentPage = ref<number | null>(null)
+
 const maxResults = ref<number>(20)
+const startIndex = ref<number>(maxResults.value)
 const visible = ref<boolean>(false)
 const loading = ref<boolean>(false)
-const hasMore = ref(true)
-const startIndex = ref<number>(maxResults.value)
 
 const totalPages = computed(() => Math.round(totalItems.value / maxResults.value))
 
 /**
  * Получает список книг из Google Books API.
- * @param {string} query - Поисковый запрос для поиска книг.
+ * @param {string | object} query - Поисковый запрос для поиска книг.
  * @param {number} maxResults - Максимальное количество результатов.
  * @returns {Promise<Book[]>} Массив объектов книг из API.
  */
-const getBooks = async (query: string, maxResults: number): Promise<Book[]> => {
+const getBooks = async (
+  query: string | object,
+  maxResults: number,
+  startIndex?: number,
+): Promise<Book[]> => {
   try {
     const response = await axios.get(BASE_URL, {
       params: {
         q: query,
-        key: API_KEY,
+        key: import.meta.env.VITE_API_KEY,
         maxResults: maxResults,
+        startIndex: startIndex || 0,
       },
     })
     console.log(response)
@@ -51,22 +54,16 @@ const getBooks = async (query: string, maxResults: number): Promise<Book[]> => {
   }
 }
 
-// const loadMoreBooks = async () => {
-//   if (loading.value || !hasMore.value) {
-//     return
-//   }
-//   loading.value = true
-//   try {
-//     maxResults.value += 20
-//     const newBooks = await getBooks(query.value, maxResults.value)
+const getBookById = async (id: string) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/${id}`)
+    return response.data || null
+  } catch (e) {
+    console.log(e)
+    return null
+  }
+}
 
-//     items.value = [...items.value, ...newBooks]
-//   } catch (error) {
-//     console.error('Ошибка загрузки:', error)
-//   } finally {
-//     loading.value = false
-//   }
-// }
 const debouncedGetBooks = debounce(async (newQuery: string, maxResults: number) => {
   if (newQuery) {
     items.value = await getBooks(newQuery, maxResults)
@@ -74,29 +71,23 @@ const debouncedGetBooks = debounce(async (newQuery: string, maxResults: number) 
 }, 250)
 
 const updateQueryInUrl = (newQuery: string) => {
-  router.push({
-    path: route.path,
-    query: { ...route.query, query: newQuery },
-  })
-}
-watch([query, maxResults], async ([newQuery, newMaxResults]) => {
-  await debouncedGetBooks(newQuery || query, newMaxResults || maxResults)
-})
+  const newQueryParams = { ...route.query };
 
-onMounted(async () => {
-  query.value = await route.query.query
-  if (!items.value.length) {
-    items.value = await getBooks(query, maxResults.value)
-  }
-})
-
-onBeforeRouteUpdate((to, from, next) => {
-  if (to.path !== from.path) {
-    next({ path: to.path, query: { ...to.query, query: query.value } })
+  if (newQuery) {
+    newQueryParams.query = newQuery;
   } else {
-    next()
+    delete newQueryParams.query; 
   }
-})
+
+  router.push({ path: route.path, query: newQueryParams });
+};
+
+
+const loadMoreBooks = async () => {
+  startIndex.value += 20
+  const newBooks = await getBooks(query.value, maxResults.value, 28)
+  items.value = [...items.value, ...newBooks]
+}
 
 const openBook = (id: string) => {
   router.push({
@@ -112,15 +103,44 @@ const closeDialog = () => {
   })
 }
 
+
+watch(
+  [query, maxResults],
+  async ([newQuery, newMaxResults]) => {
+    debouncedGetBooks(newQuery || '', newMaxResults || maxResults.value)
+
+    if (!query.value.length) {
+      items.value = await getBooks(query, maxResults.value)
+    }
+  },
+  { deep: true },
+)
+
+onMounted(async () => {
+  query.value = route.query.query as string
+  items.value = await getBooks(query, maxResults.value)
+})
+
+onBeforeRouteUpdate((to) => {
+  const newQuery = { ...to.query };
+
+  if (!query.value) {
+    delete newQuery.query;
+  } else {
+    newQuery.query = query.value;
+  }
+
+  if (JSON.stringify(newQuery) !== JSON.stringify(to.query)) {
+    router.replace({ path: to.path, query: newQuery });
+  }
+});
+
+
 watch(
   () => route.params.id,
   async (newId) => {
     if (newId) {
-      if (!items.value.length) {
-        query.value = route.query.query
-        items.value = await getBooks(query.value, maxResults.value)
-      }
-      selectedBook.value = items.value.find((book) => book.id === newId) || null
+      selectedBook.value = (await getBookById(newId as string)) || null
       visible.value = true
     } else {
       selectedBook.value = null
@@ -179,11 +199,13 @@ watch(
       @update:selection="(id) => openBook(id)"
     ></books-table>
 
-    <div
+    <!-- <div
       v-infinite-scroll="loadMoreBooks"
       class="observer-element"
       style="height: 20px; background: transparent"
-    ></div>
+    ></div> -->
+
+    <button @click="loadMoreBooks">еще</button>
 
     <book-details
       :visible="visible"

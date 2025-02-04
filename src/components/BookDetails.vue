@@ -18,7 +18,7 @@
 
 <script setup lang="ts">
 import Dialog from 'primevue/dialog'
-import { defineEmits, defineProps, watch, ref } from 'vue'
+import { watch, ref } from 'vue'
 
 interface IProps {
   data: Book | ''
