@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BookDetails from '@/components/BookDetails.vue'
 import BookEdit from '@/components/BookEdit.vue'
-import BooksTable from '@/components/ui/BooksTable.vue'
+import BooksTable from '@/components/UI/BooksTable.vue'
 import debounce from '@/utils/debounce'
 import axios from 'axios'
 import Button from 'primevue/button'
