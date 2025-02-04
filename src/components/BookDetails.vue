@@ -3,22 +3,48 @@
     v-model:visible="modalVisible"
     modal
     @update:visible="onClick"
-    class="px-4 py-3"
+    class="px-4 py-3 w-4xl"
     :header="modalData?.volumeInfo.title || ''"
-    :style="{ width: '25rem' }"
   >
-    <template v-if="modalData?.volumeInfo.description">
-      {{ modalData?.volumeInfo.description }}
-    </template>
-    <template v-else>
-      Нет описания
-    </template>
+    <div>
+      <span>{{ formatDate(modalData?.volumeInfo.publishedDate) }}</span>
+    </div>
+    <div>
+      <p class="font-semibold">Описание</p>
+      <template v-if="modalData?.volumeInfo.description">
+        <p>{{ modalData?.volumeInfo.description }}</p>
+      </template>
+      <template v-else><p>Нет описания</p></template>
+    </div>
+
+    <div>
+      <p class="font-semibold">Автор</p>
+      <template v-if="modalData?.volumeInfo.authors">
+        <template v-if="modalData?.volumeInfo.authors.length">
+          <p>{{ arrayToString(modalData?.volumeInfo.authors) }}</p>
+        </template>
+        <p v-else>Автор неизвестен</p>
+      </template>
+    </div>
+
+    <div>
+      <p class="font-semibold">Категории</p>
+      <template v-if="modalData?.volumeInfo.description">
+        <template v-if="modalData?.volumeInfo.categories.length">
+          <p>{{ modalData?.volumeInfo.categories[0] }}</p>
+        </template>
+        <p v-else>Нет категорий</p>
+      </template>
+      <template v-else><p>Нет категорий</p></template>
+    </div>
   </Dialog>
 </template>
 
 <script setup lang="ts">
+import arrayToString from '@/utils/arrayToString'
+import formatDate from '@/utils/formatDate'
 import Dialog from 'primevue/dialog'
-import { watch, ref } from 'vue'
+import { ref, watch } from 'vue'
 
 interface IProps {
   data: Book | ''

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BookDetails from '@/components/BookDetails.vue'
+import BookEdit from '@/components/BookEdit.vue'
 import BooksTable from '@/components/ui/BooksTable.vue'
 import debounce from '@/utils/debounce'
 import axios from 'axios'
@@ -15,15 +16,16 @@ const route = useRoute()
 
 const items = ref<Book[]>([])
 const selectedBook = ref<Book | null>(null)
+const editedBook = ref<Book | null>(null)
 const query = ref<string>('')
 const totalItems = ref<number>(1)
 
+const editedTitle = ref<string>('')
 const maxResults = ref<number>(20)
 const startIndex = ref<number>(maxResults.value)
 const visible = ref<boolean>(false)
-const loading = ref<boolean>(false)
-
-const totalPages = computed(() => Math.round(totalItems.value / maxResults.value))
+const loading = ref<boolean>(true)
+const visibleEdit = ref<boolean>(false)
 
 /**
  * Получает список книг из Google Books API.
@@ -36,6 +38,7 @@ const getBooks = async (
   maxResults: number,
   startIndex?: number,
 ): Promise<Book[]> => {
+  loading.value = true
   try {
     const response = await axios.get(BASE_URL, {
       params: {
@@ -47,14 +50,23 @@ const getBooks = async (
     })
     console.log(response)
     totalItems.value = response.data.totalItems
+    loading.value = false
     return response.data.items || []
   } catch (error) {
     console.error('Ошибка при запросе к Google Books API:', error)
     return []
+  } finally {
+    loading.value = false
   }
 }
 
-const getBookById = async (id: string) => {
+/**
+ * Получает информацию о книге по её ID.
+ *
+ * @param {string} id - Идентификатор книги.
+ * @returns {Promise<Book | null>} Объект с данными книги или `null`, если произошла ошибка.
+ */
+const getBookById = async (id: string): Book => {
   try {
     const response = await axios.get(`${BASE_URL}/${id}`)
     return response.data || null
@@ -71,22 +83,56 @@ const debouncedGetBooks = debounce(async (newQuery: string, maxResults: number) 
 }, 250)
 
 const updateQueryInUrl = (newQuery: string) => {
-  const newQueryParams = { ...route.query };
+  const newQueryParams = { ...route.query }
 
   if (newQuery) {
-    newQueryParams.query = newQuery;
+    newQueryParams.query = newQuery
   } else {
-    delete newQueryParams.query; 
+    delete newQueryParams.query
   }
 
-  router.push({ path: route.path, query: newQueryParams });
-};
+  router.push({ path: route.path, query: newQueryParams })
+}
 
-
+/**
+ * Загружает дополнительные книги и добавляет их в список.
+ * Увеличивает индекс для получения следующей порции книг и проверяет,
+ * были ли загружены все книги.
+ *
+ * @async
+ * @returns {Promise<void>} Возвращает промис, который разрешается, когда загрузка завершена.
+ */
 const loadMoreBooks = async () => {
-  startIndex.value += 20
-  const newBooks = await getBooks(query.value, maxResults.value, 28)
-  items.value = [...items.value, ...newBooks]
+  startIndex.value += maxResults.value
+
+  const newBooks = await getBooks(query, maxResults.value, startIndex.value)
+
+  if (newBooks.length > 0) {
+    items.value = [...items.value, ...newBooks]
+  }
+  if (items.value === totalItems.value) {
+    return
+  }
+}
+
+const openEdit = (item: Book) => {
+  visibleEdit.value = true
+  editedBook.value = item
+}
+
+const closeEdit = () => {
+  visibleEdit.value = false
+  editedTitle.value = ''
+}
+
+const saveEdit = (item: Book) => {
+  const savedBooks = JSON.parse(localStorage.getItem('editedBooks') || '{}')
+  savedBooks[item.id] = item
+  localStorage.setItem('editedBooks', JSON.stringify(savedBooks))
+
+  items.value = items.value.map((book: Book) => (book.id === item.id ? item : book))
+  visibleEdit.value = false
+  editedTitle.value = ''
 }
 
 const openBook = (id: string) => {
@@ -103,18 +149,21 @@ const closeDialog = () => {
   })
 }
 
-
 watch(
   [query, maxResults],
   async ([newQuery, newMaxResults]) => {
     debouncedGetBooks(newQuery || '', newMaxResults || maxResults.value)
 
-    if (!query.value.length) {
+    if (!query.value) {
       items.value = await getBooks(query, maxResults.value)
     }
   },
   { deep: true },
 )
+const itemsWithEdits = computed(() => {
+  const savedBooks = JSON.parse(localStorage.getItem('editedBooks') || '{}')
+  return items.value.map((book: Book) => (savedBooks[book.id] ? savedBooks[book.id] : book))
+})
 
 onMounted(async () => {
   query.value = route.query.query as string
@@ -122,19 +171,18 @@ onMounted(async () => {
 })
 
 onBeforeRouteUpdate((to) => {
-  const newQuery = { ...to.query };
+  const newQuery = { ...to.query }
 
   if (!query.value) {
-    delete newQuery.query;
+    delete newQuery.query
   } else {
-    newQuery.query = query.value;
+    newQuery.query = query.value
   }
 
   if (JSON.stringify(newQuery) !== JSON.stringify(to.query)) {
-    router.replace({ path: to.path, query: newQuery });
+    router.replace({ path: to.path, query: newQuery })
   }
-});
-
+})
 
 watch(
   () => route.params.id,
@@ -152,6 +200,7 @@ watch(
 </script>
 
 <template>
+  {{ editedTitle }}
   <main>
     <div class="my-2 flex gap-1.5 items-center">
       <div class="flex-1">
@@ -169,7 +218,7 @@ watch(
         icon="pi pi-sparkles"
         class="border rounded-md border-gray-500 px-2 py-1 h-full hover:bg-gray-50 transition"
         variant="text"
-        aria-label="Load Button"
+        aria-label=""
         v-tooltip.bottom="{
           value: 'Загрузка по кнопке',
           pt: {
@@ -193,33 +242,29 @@ watch(
         }"
       />
     </div>
+
     <books-table
-      :items="items"
+      :loading="loading"
+      :items="itemsWithEdits"
       :selectedBook="selectedBook"
       @update:selection="(id) => openBook(id)"
+      @update:edit="(item) => openEdit(item)"
     ></books-table>
 
-    <!-- <div
-      v-infinite-scroll="loadMoreBooks"
-      class="observer-element"
-      style="height: 20px; background: transparent"
-    ></div> -->
-
-    <button @click="loadMoreBooks">еще</button>
+    <div v-infinite-scroll="loadMoreBooks" class="h-5 bg-transparent" v-if="!loading"></div>
 
     <book-details
       :visible="visible"
       :data="selectedBook"
       @update:visible="closeDialog"
     ></book-details>
+
+    <book-edit
+      v-model="editedTitle"
+      :visible="visibleEdit"
+      :data="editedBook"
+      @update:visible="closeEdit"
+      @update:item="(item) => saveEdit(item)"
+    ></book-edit>
   </main>
 </template>
-
-<style scoped>
-.loading-indicator {
-  padding: 1rem;
-  text-align: center;
-  color: #666;
-  font-size: 0.9em;
-}
-</style>

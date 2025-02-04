@@ -1,11 +1,11 @@
 <template>
   <div>
-    <Fieldset
+    <!-- <Fieldset
       :toggleable="true"
       class="px-4 py-4 border rounded-md border-gray-500 mb-4"
       :collapsed="true"
     >
-      <!-- Кастомизация всей легенды -->
+
       <template #legend>
         <div class="flex items-center gap-2">
           <i class="pi pi-trophy text-primary"></i>
@@ -13,7 +13,7 @@
         </div>
       </template>
 
-      <!-- Кастомизация кнопки переключения -->
+
       <template #toggleIcon="{ collapsed }">
         <i
           :class="collapsed ? 'pi pi-chevron-down' : 'pi pi-chevron-up'"
@@ -21,7 +21,7 @@
         />
       </template>
 
-      <!-- Основное содержимое -->
+
       <template #content>
         <div class="achievement-list">
           <div class="achievement-item flex items-center gap-3 mb-3">
@@ -41,7 +41,7 @@
           </div>
         </div>
       </template>
-    </Fieldset>
+    </Fieldset> -->
   </div>
 </template>
 
