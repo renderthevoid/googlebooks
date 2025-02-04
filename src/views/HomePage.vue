@@ -214,33 +214,21 @@ watch(
         ></InputText>
       </div>
 
-      <Button
-        icon="pi pi-sparkles"
-        class="border rounded-md border-gray-500 px-2 py-1 h-full hover:bg-gray-50 transition"
-        variant="text"
-        aria-label=""
-        v-tooltip.bottom="{
-          value: 'Загрузка по кнопке',
-          pt: {
-            text: 'px-2',
-          },
-          autoHide: false,
-        }"
-      />
-
-      <Button
-        icon="pi pi-play-circle"
-        class="border rounded-md border-gray-500 px-2 py-1 h-full hover:bg-gray-50 transition"
-        variant="text"
-        aria-label="Endless Scroll"
-        v-tooltip.bottom="{
-          value: 'Бесконечная лента',
-          pt: {
-            text: 'px-2',
-          },
-          autoHide: false,
-        }"
-      />
+      <RouterLink :to="{ name: 'about' }">
+        <Button
+          icon="pi pi-play-circle"
+          class="border rounded-md border-gray-500 px-2 py-1 h-full hover:bg-gray-50 transition"
+          variant="text"
+          aria-label="About me"
+          v-tooltip.bottom="{
+            value: 'Информация обо мне',
+            pt: {
+              text: 'px-2',
+            },
+            autoHide: false,
+          }"
+        />
+      </RouterLink>
     </div>
 
     <books-table
