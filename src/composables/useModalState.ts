@@ -17,7 +17,7 @@ export const useModalState = <T = undefined>() => {
     data: undefined,
   });
 
-  // Метод для открытия диалога
+ 
   const openModal = (data?: T) => {
     modalState.value = {
       isVisible: true,
