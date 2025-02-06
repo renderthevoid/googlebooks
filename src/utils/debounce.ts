@@ -9,7 +9,7 @@
  *
  * @template T - Тип функции, которую вы хотите дебаунсить.
  */
-function debounce<T extends (...args: any[]) => void>(
+export function debounce<T extends (...args: any[]) => void>(
   fn: T,
   delay: number,
 ): (...args: Parameters<T>) => void {
@@ -25,4 +25,4 @@ function debounce<T extends (...args: any[]) => void>(
   }
 }
 
-export default debounce
+

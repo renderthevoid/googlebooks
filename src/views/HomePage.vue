@@ -2,14 +2,12 @@
 import BookDetails from '@/components/BookDetails.vue'
 import BookEdit from '@/components/BookEdit.vue'
 import BooksTable from '@/components/UI/BooksTable.vue'
-import debounce from '@/utils/debounce'
-import axios from 'axios'
+import { useBooks } from '@/composables/useBooks'
+import { debounce, getUpdatedQueryParams } from '@/utils'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import { computed, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
-
-const BASE_URL = 'https://www.googleapis.com/books/v1/volumes'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,83 +16,15 @@ const items = ref<Book[]>([])
 const selectedBook = ref<Book | null>(null)
 const editedBook = ref<Book | null>(null)
 const query = ref<string>('')
-const totalItems = ref<number>(1)
 
 const editedTitle = ref<string>('')
 const maxResults = ref<number>(20)
 const startIndex = ref<number>(maxResults.value)
 const visible = ref<boolean>(false)
-const loading = ref<boolean>(true)
+
 const visibleEdit = ref<boolean>(false)
 
-/**
- * Получает список книг из Google Books API.
- * @param {string | object} query - Поисковый запрос для поиска книг.
- * @param {number} maxResults - Максимальное количество результатов.
- * @returns {Promise<Book[]>} Массив объектов книг из API.
- */
-const getBooks = async (
-  query: string | object,
-  maxResults: number,
-  startIndex?: number,
-): Promise<Book[]> => {
-  loading.value = true
-  try {
-    const response = await axios.get(BASE_URL, {
-      params: {
-        q: query,
-        key: import.meta.env.VITE_API_KEY,
-        maxResults: maxResults,
-        startIndex: startIndex || 0,
-      },
-    })
-    console.log(response)
-    totalItems.value = response.data.totalItems
-    loading.value = false
-    return response.data.items || []
-  } catch (error) {
-    console.error('Ошибка при запросе к Google Books API:', error)
-    return []
-  } finally {
-    loading.value = false
-  }
-}
-
-/**
- * Получает информацию о книге по её ID.
- *
- * @param {string} id - Идентификатор книги.
- * @returns {Promise<Book | null>} Объект с данными книги или `null`, если произошла ошибка.
- */
-const getBookById = async (id: string): Book => {
-  try {
-    const response = await axios.get(`${BASE_URL}/${id}`)
-    return response.data || null
-  } catch (e) {
-    console.log(e)
-    return null
-  }
-}
-
-/**
- * Обновляет параметры запроса, модифицируя или удаляя параметр 'query'
- *
- * @param {Record<string, any>} currentQuery - Текущие параметры запроса
- * @param {string} [queryValue] - Новое значение для параметра 'query'.
- *                               Если значение пустое или не передано - параметр 'query' будет удалён
- * @returns {Record<string, any>} Новый объект параметров запроса с обновлённым 'query'
- */
-function getUpdatedQueryParams(currentQuery: Record<string, any>, queryValue?: string) {
-  const newQuery = { ...currentQuery }
-
-  if (queryValue) {
-    newQuery.query = queryValue
-  } else {
-    delete newQuery.query
-  }
-
-  return newQuery
-}
+const { loading, totalItems, getBooks, getBookById } = useBooks()
 
 /**
  * Загружает дополнительные книги и добавляет их в список.
@@ -107,7 +37,7 @@ function getUpdatedQueryParams(currentQuery: Record<string, any>, queryValue?: s
 const loadMoreBooks = async () => {
   startIndex.value += maxResults.value
 
-  const newBooks = await getBooks(query, maxResults.value, startIndex.value)
+  const newBooks = (await getBooks(query, maxResults.value, startIndex.value)) || []
 
   if (newBooks.length > 0) {
     items.value = [...items.value, ...newBooks]
@@ -149,16 +79,18 @@ const saveEdit = (item: Book) => {
 }
 
 const openBook = (id: string) => {
+  const queryParams = query.value ? { query: query.value } : {}
   router.push({
     path: `/books/${id}`,
-    query: { query: query.value },
+    query: queryParams,
   })
 }
 
 const closeDialog = () => {
+  const queryParams = query.value ? { query: query.value } : {}
   router.push({
     path: '/books',
-    query: { query: query.value },
+    query: queryParams,
   })
 }
 
@@ -180,8 +112,8 @@ const itemsWithEdits = computed(() => {
 })
 
 onMounted(async () => {
-  query.value = route.query.query as string
-  items.value = await getBooks(query, maxResults.value)
+  query.value = (route.query.query as string) || ''
+  await getBooks(query, maxResults.value, 0)
 })
 
 onBeforeRouteUpdate((to) => {

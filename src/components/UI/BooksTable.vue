@@ -61,15 +61,11 @@
 </template>
 
 <script setup lang="ts">
-import formatDate from '@/utils/formatDate'
+import { arrayToString, formatDate } from '@/utils'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Skeleton from 'primevue/skeleton'
-
-
-import arrayToString from '@/utils/arrayToString'
-
 import { ref, watch } from 'vue'
 
 interface IProps {

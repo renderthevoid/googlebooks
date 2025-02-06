@@ -5,6 +5,6 @@
  * @returns {string} Строка, содержащая элементы массива, разделенные `", "`. Если массив пустой или `undefined`, возвращает пустую строку.
  */
 
-const arrayToString = (arr: string[]) => arr?.map((item) => item.toString()).join(', ')
+export const arrayToString = (arr: string[]) => arr?.map((item) => item.toString()).join(', ')
 
-export default arrayToString
+

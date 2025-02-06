@@ -41,8 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import arrayToString from '@/utils/arrayToString'
-import formatDate from '@/utils/formatDate'
+import { arrayToString, formatDate } from '@/utils'
 import Dialog from 'primevue/dialog'
 import { ref, watch } from 'vue'
 
