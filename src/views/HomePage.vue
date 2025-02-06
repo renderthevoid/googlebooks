@@ -2,11 +2,13 @@
 import BookDetails from '@/components/BookDetails.vue'
 import BookEdit from '@/components/BookEdit.vue'
 import BooksTable from '@/components/UI/BooksTable.vue'
-import { useBooks } from '@/composables/useBooks'
+import { useBooks } from '@/composables'
+import { useModalState } from '@/composables/useModalState'
 import { debounce, getUpdatedQueryParams } from '@/utils'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import { computed, onMounted, ref, watch } from 'vue'
+
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -14,7 +16,6 @@ const route = useRoute()
 
 const items = ref<Book[]>([])
 const selectedBook = ref<Book | null>(null)
-const editedBook = ref<Book | null>(null)
 const query = ref<string>('')
 
 const editedTitle = ref<string>('')
@@ -22,28 +23,25 @@ const maxResults = ref<number>(20)
 const startIndex = ref<number>(maxResults.value)
 const visible = ref<boolean>(false)
 
-const visibleEdit = ref<boolean>(false)
-
 const { loading, totalItems, getBooks, getBookById } = useBooks()
+const { openModal, closeModal, isVisible, dialogData } = useModalState()
 
-/**
- * Загружает дополнительные книги и добавляет их в список.
- * Увеличивает индекс для получения следующей порции книг и проверяет,
- * были ли загружены все книги.
- *
- * @async
- * @returns {Promise<void>} Возвращает промис, который разрешается, когда загрузка завершена.
- */
 const loadMoreBooks = async () => {
-  startIndex.value += maxResults.value
+  try {
+    startIndex.value += maxResults.value
+    const newBooks = (await getBooks(query, maxResults.value, startIndex.value)) || []
 
-  const newBooks = (await getBooks(query, maxResults.value, startIndex.value)) || []
+    if (newBooks.length === 0) {
+      return
+    }
 
-  if (newBooks.length > 0) {
     items.value = [...items.value, ...newBooks]
-  }
-  if (items.value === totalItems.value) {
-    return
+
+    if (items.value.length >= totalItems.value) {
+      return
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке книг:', error)
   }
 }
 
@@ -58,24 +56,13 @@ const updateQueryInUrl = (newQuery: string) => {
   router.push({ path: route.path, query: newQueryParams })
 }
 
-const openEdit = (item: Book) => {
-  visibleEdit.value = true
-  editedBook.value = item
-}
-
-const closeEdit = () => {
-  visibleEdit.value = false
-  editedTitle.value = ''
-}
-
 const saveEdit = (item: Book) => {
   const savedBooks = JSON.parse(localStorage.getItem('editedBooks') || '{}')
   savedBooks[item.id] = item
   localStorage.setItem('editedBooks', JSON.stringify(savedBooks))
 
   items.value = items.value.map((book: Book) => (book.id === item.id ? item : book))
-  visibleEdit.value = false
-  editedTitle.value = ''
+  closeModal()
 }
 
 const openBook = (id: string) => {
@@ -175,7 +162,7 @@ watch(
       :items="itemsWithEdits"
       :selectedBook="selectedBook"
       @update:selection="(id) => openBook(id)"
-      @update:edit="(item) => openEdit(item)"
+      @update:edit="(item) => openModal(item)"
     ></books-table>
 
     <div v-infinite-scroll="loadMoreBooks" class="h-5 bg-transparent" v-if="!loading"></div>
@@ -188,9 +175,9 @@ watch(
 
     <book-edit
       v-model="editedTitle"
-      :visible="visibleEdit"
-      :data="editedBook"
-      @update:visible="closeEdit"
+      :visible="isVisible"
+      :data="dialogData"
+      @update:visible="closeModal"
       @update:item="(item) => saveEdit(item)"
     ></book-edit>
   </main>
