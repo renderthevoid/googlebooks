@@ -24,6 +24,7 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@tsconfig/node22": "^22.0.0",
     "@types/gapi.client.books": "^1.0.4",
     "@types/node": "^22.10.7",

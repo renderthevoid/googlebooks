@@ -4,8 +4,7 @@
     modal
     @update:visible="onClick"
     class="px-4 py-3 w-4xl"
-    :header="modalData?.volumeInfo.title || ''"
-  >
+    :header="modalData?.volumeInfo.title || ''">
     <div>
       <span>{{ formatDate(modalData?.volumeInfo.publishedDate) }}</span>
     </div>
@@ -41,36 +40,38 @@
 </template>
 
 <script setup lang="ts">
-import { arrayToString, formatDate } from '@/utils'
-import Dialog from 'primevue/dialog'
-import { ref, watch } from 'vue'
+import { ref, watch } from 'vue';
+
+import { arrayToString, formatDate } from '@/utils';
+
+import Dialog from 'primevue/dialog';
 
 interface IProps {
-  data: Book | ''
-  visible: boolean
+  data: Book | '';
+  visible: boolean;
 }
-const emit = defineEmits(['update:visible'])
-const props = defineProps<IProps>()
+const emit = defineEmits(['update:visible']);
+const props = defineProps<IProps>();
 
-const modalVisible = ref(props.visible)
-const modalData = ref(props.data)
+const modalVisible = ref(props.visible);
+const modalData = ref(props.data);
 
 watch(
   () => props.visible,
   (newValue) => {
-    modalVisible.value = newValue
-  },
-)
+    modalVisible.value = newValue;
+  }
+);
 watch(
   () => props.data,
   (newValue) => {
-    modalData.value = newValue
-  },
-)
+    modalData.value = newValue;
+  }
+);
 
 const onClick = () => {
-  emit('update:visible')
-}
+  emit('update:visible');
+};
 </script>
 
 <style scoped></style>
